@@ -1,0 +1,62 @@
+name: Directus
+slug: directus
+type: plugin
+version: 0.6.0
+description: a directus api plugin
+icon: plug
+author:
+  name: Erik Konrad
+  email: erik.konrad@zebra.de
+homepage: https://github.com/erik-konrad/grav-plugin-directus
+keywords: grav, plugin, etc
+bugs: https://github.com/erik-konrad/grav-plugin-directus/issues
+docs: https://github.com/erik-konrad/grav-plugin-directus/blob/develop/README.md
+license: MIT
+
+dependencies:
+  - { name: grav, version: '>=1.6.0' }
+
+form:
+  validation: loose
+  fields:
+    enabled:
+      type: toggle
+      label: PLUGIN_ADMIN.PLUGIN_STATUS
+      highlight: 1
+      default: 0
+      options:
+        1: PLUGIN_ADMIN.ENABLED
+        0: PLUGIN_ADMIN.DISABLED
+      validate:
+        type: bool
+    disableCors:
+      type: toggle
+      label: Disable CORS Checks
+      highlight: 1
+      default: 0
+      options:
+        1: CORS Checks off
+        0: CORS Checks on
+      validate:
+        type: bool
+    assetsFolderName:
+      type: text
+      label: Assets Folder Name
+    directus.directusAPIUrl:
+      type: text
+      label: Directus API URL
+    directus.projectName:
+      type: text
+      label: Directus API Project Name
+    directus.token:
+      type: text
+      label: Directus Token
+    directus.email:
+      type: text
+      label: Directus API User / Email
+    directus.password:
+      type: text
+      label: Directus API Password
+    directus.hookPrefix:
+      type: text
+      label: Hook Prefix for GRAV - Webhooks
