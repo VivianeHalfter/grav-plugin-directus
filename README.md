@@ -1,4 +1,6 @@
-# Directus Plugin
+# Directus Plugin - Hacked Edition
+
+## Caution - this is a modified version for the Jacob Metal Group
 
 The **Directus** Plugin is an extension for [Grav CMS](http://github.com/getgrav/grav). a directus api plugin 1
 
