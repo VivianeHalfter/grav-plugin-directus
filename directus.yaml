@@ -7,6 +7,8 @@ env:
   status:
     default: published
     preview: published,preview
+  instance: nha
+  defaultLanguage: en-US
 directus:
   token: 1234567
   email: your@email.com
