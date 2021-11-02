@@ -377,6 +377,7 @@ class DirectusPlugin extends Plugin
             foreach ($response->toArray()['data'] as $item){
                 $object = $this->collection->get($item['id']);
 
+                $item = $this->refactorItem($item);
                 if ($object) {
                     $object->update($item);
                     $object->save();
@@ -393,6 +394,44 @@ class DirectusPlugin extends Plugin
         ], JSON_THROW_ON_ERROR);
         Cache::clearCache();
         exit(200);
+    }
+
+    /**
+     * @param array $item
+     * @return array
+     */
+    private function refactorItem(array $item) {
+        if(key_exists('translations', $item)) {
+            foreach ($item['translations'] as $masterKey => $translation) {
+                $parsedCode = explode('-', $translation['languages_code']);
+                if(count($parsedCode) === 3 && $parsedCode[2] === $this->config()['env']['instance']) {
+                    if(($parsedCode[0] . '-' . $parsedCode[1]) === $this->config()['env']['defaultLanguage']) {
+                        foreach($translation as $key => $value) {
+                            if($key !== 'languages_code' && $key !== 'id') {
+                                $item[$key] = $value;
+                            }
+                        }
+                    } else {
+                        $langCodeToProcess = $parsedCode[0] . '-' . $parsedCode[1];
+                        foreach($item['translations'] as $index => $trans2) {
+
+                            if($trans2['languages_code'] === $langCodeToProcess) {
+                                foreach($translation as $key => $value) {
+                                    // do something
+                                    if($key !== 'languages_code') {
+                                        $item['translations'][$index][$key] = $value;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    unset($item['translations'][$masterKey]);
+                }
+            }
+        }
+
+        return $item;
     }
 
     /**
@@ -414,7 +453,7 @@ class DirectusPlugin extends Plugin
         }
 
         if($response->getStatusCode() === 200) {
-            $data = $response->toArray()['data'];
+            $data = $this->refactorItem($response->toArray()['data']);
             $objectInstance = new FlexObject($data, $data['id'], $this->directory);
             $object = $objectInstance->create($data['id']);
             $this->collection->add($object);
@@ -446,7 +485,8 @@ class DirectusPlugin extends Plugin
                     $object = $this->collection->get($id);
 
                     if ($object) {
-                        $object->update($response->toArray()['data']);
+                        $data = $this->refactorItem($response->toArray()['data']);
+                        $object->update($data);
                         $object->save();
                     } else {
                         $this->createFlexObject($collection, $id);
