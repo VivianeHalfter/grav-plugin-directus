@@ -402,8 +402,16 @@ class DirectusPlugin extends Plugin
      */
     private function refactorItem(array $item) {
         if(key_exists('translations', $item)) {
+
             foreach ($item['translations'] as $masterKey => $translation) {
-                $parsedCode = explode('-', $translation['languages_code']);
+                $parsedCode = [];
+
+                if(is_string($translation['languages_code'])) {
+                    $parsedCode = explode('-', $translation['languages_code']);
+                } else {
+                    $parsedCode = explode('-', $translation['languages_code']['code']);
+                }
+
                 if(count($parsedCode) === 3 && $parsedCode[2] === $this->config()['env']['instance']) {
                     if(($parsedCode[0] . '-' . $parsedCode[1]) === $this->config()['env']['defaultLanguage']) {
                         foreach($translation as $key => $value) {
@@ -415,7 +423,7 @@ class DirectusPlugin extends Plugin
                         $langCodeToProcess = $parsedCode[0] . '-' . $parsedCode[1];
                         foreach($item['translations'] as $index => $trans2) {
 
-                            if($trans2['languages_code'] === $langCodeToProcess) {
+                            if((is_string($trans2['languages_code']) ? $trans2['languages_code'] : $trans2['languages_code']['code']) === $langCodeToProcess) {
                                 foreach($translation as $key => $value) {
                                     // do something
                                     if($key !== 'languages_code') {
