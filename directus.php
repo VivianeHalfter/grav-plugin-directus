@@ -435,6 +435,7 @@ class DirectusPlugin extends Plugin
                 }
 
                 if(count($parsedCode) === 3 && $parsedCode[2] === $this->config()['env']['instance']) {
+                    dump( $parsedCode );
                     if(($parsedCode[0] . '-' . $parsedCode[1]) === $this->config()['env']['defaultLanguage']) {
                         foreach($translation as $key => $value) {
                             if($key !== 'languages_code' && $key !== 'id') {
@@ -456,6 +457,10 @@ class DirectusPlugin extends Plugin
                         }
                     }
 
+                    unset($item['translations'][$masterKey]);
+                }
+                elseif ( count($parsedCode) === 3 )
+                {
                     unset($item['translations'][$masterKey]);
                 }
             }
