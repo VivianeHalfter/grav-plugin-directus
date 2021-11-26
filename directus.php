@@ -376,9 +376,10 @@ class DirectusPlugin extends Plugin
      */
     private function processFlexObjects() {
 
-        if(file_exists('user/data/flex-objects/.lock')) {
-            if(time() - filemtime('user/data/flex-objects/.lock') > ($this->config()['lockfileLifetime'] ?? 120)) {
-                unlink('user/data/flex-objects/.lock');
+        $lockfile = 'user/data/flex-objects/.lock';
+        if(file_exists($lockfile)) {
+            if(time() - filemtime($lockfile) > ($this->config()['lockfileLifetime'] ?? 120)) {
+                unlink($lockfile);
             } else {
                 echo json_encode([
                     'status' => 200,
@@ -391,7 +392,7 @@ class DirectusPlugin extends Plugin
 
         $this->delTree('user/data/flex-objects');
 
-        touch('user/data/flex-objects/.lock');
+        touch($lockfile);
 
         $collectionArray = $this->config()['directus']['synchronizeTables'];
 
@@ -422,7 +423,7 @@ class DirectusPlugin extends Plugin
             'message' => 'all done'
         ], JSON_THROW_ON_ERROR);
         Cache::clearCache();
-        unlink('user/data/flex-objects/.lock');
+        unlink($lockfile);
         exit(200);
     }
 
@@ -465,9 +466,7 @@ class DirectusPlugin extends Plugin
                     }
 
                     unset($item['translations'][$masterKey]);
-                }
-                elseif ( count($parsedCode) === 3 )
-                {
+                } elseif ( count($parsedCode) === 3 ) {
                     unset($item['translations'][$masterKey]);
                 }
             }
