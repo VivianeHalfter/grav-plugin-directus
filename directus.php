@@ -23,6 +23,11 @@ class DirectusPlugin extends Plugin
 {
 
     /**
+     * @var String
+     */
+    protected $lockfile = 'user/data/flex-objects/.lock';
+
+    /**
      * @var Flex
      */
     protected $flex;
@@ -302,9 +307,9 @@ class DirectusPlugin extends Plugin
 
         $statusCode = 0;
 
-        if(file_exists('user/data/flex-objects/.lock')) {
-            if(time() - filemtime('user/data/flex-objects/.lock') > ($this->config()['lockfileLifetime'] ?? 120)) {
-                unlink('user/data/flex-objects/.lock');
+        if(file_exists($this->lockfile)) {
+            if(time() - filemtime($this->lockfile) > ($this->config()['lockfileLifetime'] ?? 120)) {
+                unlink($this->lockfile);
             } else {
                 echo json_encode([
                     'status' => 200,
@@ -375,11 +380,10 @@ class DirectusPlugin extends Plugin
      * @throws \Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface
      */
     private function processFlexObjects() {
-
-        $lockfile = 'user/data/flex-objects/.lock';
-        if(file_exists($lockfile)) {
-            if(time() - filemtime($lockfile) > ($this->config()['lockfileLifetime'] ?? 120)) {
-                unlink($lockfile);
+        // check if we are already working
+        if(file_exists($this->lockfile)) {
+            if(time() - filemtime($this->lockfile) > ($this->config()['lockfileLifetime'] ?? 120)) {
+                unlink($this->lockfile);
             } else {
                 echo json_encode([
                     'status' => 200,
@@ -390,15 +394,14 @@ class DirectusPlugin extends Plugin
             }
         }
 
+        // set lock file
+        touch($this->lockfile);
+        // remove current data
         $this->delTree('user/data/flex-objects');
-
-        touch($lockfile);
-
+        // get config
         $collectionArray = $this->config()['directus']['synchronizeTables'];
-
+        // go
         foreach ($collectionArray as $collection => $config){
-
-
             /** @var FlexCollectionInterface $collection */
             $this->collection = $this->flex->getCollection($collection);
             /** @var FlexDirectoryInterface $directory */
@@ -406,7 +409,6 @@ class DirectusPlugin extends Plugin
             $response = $this->requestItem($collection, 0, ($config['depth'] ?? 2), ($config['filter'] ?? []));
             foreach ($response->toArray()['data'] as $item){
                 $object = $this->collection->get($item['id']);
-
                 $item = $this->refactorItem($item);
                 if ($object) {
                     $object->update($item);
@@ -423,7 +425,7 @@ class DirectusPlugin extends Plugin
             'message' => 'all done'
         ], JSON_THROW_ON_ERROR);
         Cache::clearCache();
-        unlink($lockfile);
+        unlink($this->lockfile);
         exit(200);
     }
 
