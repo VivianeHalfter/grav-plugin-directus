@@ -383,6 +383,7 @@ class DirectusPlugin extends Plugin
         // check if we are already working
         if(file_exists($this->lockfile)) {
             if(time() - filemtime($this->lockfile) > ($this->config()['lockfileLifetime'] ?? 120)) {
+                dd( unlink );
                 unlink($this->lockfile);
             } else {
                 echo json_encode([
@@ -394,10 +395,10 @@ class DirectusPlugin extends Plugin
             }
         }
 
-        // set lock file
-        touch($this->lockfile);
         // remove current data
         $this->delTree('user/data/flex-objects');
+        // set lock file
+        touch($this->lockfile);
         // get config
         $collectionArray = $this->config()['directus']['synchronizeTables'];
         // go
