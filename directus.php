@@ -383,7 +383,6 @@ class DirectusPlugin extends Plugin
         // check if we are already working
         if(file_exists($this->lockfile)) {
             if(time() - filemtime($this->lockfile) > ($this->config()['lockfileLifetime'] ?? 120)) {
-                dd( unlink );
                 unlink($this->lockfile);
             } else {
                 echo json_encode([
@@ -395,39 +394,55 @@ class DirectusPlugin extends Plugin
             }
         }
 
-        // remove current data
-        $this->delTree('user/data/flex-objects');
-        // set lock file
-        touch($this->lockfile);
-        // get config
-        $collectionArray = $this->config()['directus']['synchronizeTables'];
-        // go
-        foreach ($collectionArray as $collection => $config){
-            /** @var FlexCollectionInterface $collection */
-            $this->collection = $this->flex->getCollection($collection);
-            /** @var FlexDirectoryInterface $directory */
-            $this->directory = $this->flex->getDirectory($collection);
-            $response = $this->requestItem($collection, 0, ($config['depth'] ?? 2), ($config['filter'] ?? []));
-            foreach ($response->toArray()['data'] as $item){
-                $object = $this->collection->get($item['id']);
-                $item = $this->refactorItem($item);
-                if ($object) {
-                    $object->update($item);
-                    $object->save();
-                } else {
-                    $objectInstance = new FlexObject($item, $item['id'], $this->directory);
-                    $object = $objectInstance->create($item['id']);
-                    $this->collection->add($object);
+        $pingStatusCode = $this->directusUtil->get('/server/ping')->getStatusCode();
+
+        if($pingStatusCode === 200){
+            // remove current data
+            $this->delTree('user/data/flex-objects');
+            // set lock file
+            touch($this->lockfile);
+            // get config
+            $collectionArray = $this->config()['directus']['synchronizeTables'];
+            // go
+            foreach ($collectionArray as $collection => $config){
+                /** @var FlexCollectionInterface $collection */
+                $this->collection = $this->flex->getCollection($collection);
+                /** @var FlexDirectoryInterface $directory */
+                $this->directory = $this->flex->getDirectory($collection);
+                $response = $this->requestItem($collection, 0, ($config['depth'] ?? 2), ($config['filter'] ?? []));
+                foreach ($response->toArray()['data'] as $item){
+                    $object = $this->collection->get($item['id']);
+                    $item = $this->refactorItem($item);
+                    if ($object) {
+                        $object->update($item);
+                        $object->save();
+                    } else {
+                        $objectInstance = new FlexObject($item, $item['id'], $this->directory);
+                        $object = $objectInstance->create($item['id']);
+                        $this->collection->add($object);
+                    }
                 }
             }
+            echo json_encode([
+                'status' => 200,
+                'message' => 'all done'
+            ], JSON_THROW_ON_ERROR);
+            Cache::clearCache();
+            unlink($this->lockfile);
+            exit(200);
         }
-        echo json_encode([
-            'status' => 200,
-            'message' => 'all done'
-        ], JSON_THROW_ON_ERROR);
-        Cache::clearCache();
-        unlink($this->lockfile);
-        exit(200);
+        else{
+            $this->writeLog($this->buildLogEntry($pingStatusCode, 'ping to /server/ping not successful - data has not been updated'));
+
+            echo json_encode([
+                'status' => 201,
+                'message' => 'ping to /server/ping not successful - data has not been updated'
+            ], JSON_THROW_ON_ERROR);
+
+            Cache::clearCache();
+            unlink($this->lockfile);
+            exit(200);
+        }
     }
 
     /**
@@ -616,13 +631,18 @@ class DirectusPlugin extends Plugin
      * @param $dir
      */
     private function delTree($dir){
-        $files = new RecursiveIteratorIterator(
-            new RecursiveDirectoryIterator($dir, RecursiveDirectoryIterator::SKIP_DOTS),
-            RecursiveIteratorIterator::CHILD_FIRST
-        );
-        foreach ($files as $fileinfo) {
-            $todo = ( $fileinfo->isDir() ? 'rmdir' : 'unlink' );
-            $todo( $fileinfo->getRealPath() );
+        if ( is_dir( $dir ) ) {
+            $files = new RecursiveIteratorIterator(
+                new RecursiveDirectoryIterator($dir, RecursiveDirectoryIterator::SKIP_DOTS),
+                RecursiveIteratorIterator::CHILD_FIRST
+            );
+            foreach ($files as $fileinfo) {
+                $todo = ( $fileinfo->isDir() ? 'rmdir' : 'unlink' );
+                $todo( $fileinfo->getRealPath() );
+            }
+        }
+        else{
+            mkdir($dir);
         }
     }
 
