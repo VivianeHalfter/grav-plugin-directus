@@ -381,16 +381,12 @@ class DirectusPlugin extends Plugin
      */
     private function processFlexObjects() {
         if(file_exists($this->lockfile)) {
-            if(time() - filemtime($this->lockfile) > ($this->config()['lockfileLifetime'] ?? 120)) {
-                unlink($this->lockfile);
-            } else {
-                echo json_encode([
-                    'status' => 200,
-                    'message' => 'locked'
-                ], JSON_THROW_ON_ERROR);
-                Cache::clearCache();
-                exit(200);
-            }
+            echo json_encode([
+                'status' => 200,
+                'message' => 'locked'
+            ], JSON_THROW_ON_ERROR);
+            Cache::clearCache();
+            exit(200);
         }
 
         $pingStatusCode = $this->directusUtil->get('/server/ping')->getStatusCode();
